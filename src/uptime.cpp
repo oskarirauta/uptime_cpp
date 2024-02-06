@@ -1,20 +1,99 @@
 #include <stdexcept>
 #include <cstring>
 #include <string>
-#include <unistd.h>
-#include <sys/sysinfo.h>
 #include "uptime.hpp"
 
-uptime_t::uptime_t() {
+#ifdef _WIN32
+#include <windows.h>
+#elif __linux__
+#include <unistd.h>
+#include <sys/sysinfo.h>
+#elif __NetBSD__
+#include <cstdio>
+#elif __FreeBSD__ || __APPLE__
+#include <time.h>
+#elif __OpenBSD__
+#include <stdio.h>
+#include <time.h>
+#include <sys/sysctl.h>
+#else
+#error Not supported platform
+#endif
+
+#ifdef __APPLE__
+#define GETTIME_OPTION CLOCK_MONOTONIC_RAW
+#elif __FreeBSD__
+#define GETTIME_OPTION CLOCK_UPTIME_PRECISE
+#endif
+
+
+#ifdef _WIN32
+static uint64_t getUptime(void) {
+	return ::GetTickCount();
+}
+
+#elif __NetBSD__
+static uint64_t getUptime(void) {
+
+	FILE* file;
+	if ( file = std::fopen("/proc/uptime", "r"); file == nullptr )
+		throw std::runtime_error("failed to retrieve uptime with sysinfo, reason: " + std::string(std::strerror(errno)));
+
+	double uptime;
+	std::fscanf(file, "%lf", &uptime);
+	std::fclose(file);
+
+	return uptime * 1000;
+}
+
+#elif __FreeBSD__ || __APPLE__
+static uint64_t getUptime(void) {
+
+	struct timespec time_spec;
+
+	if ( clock_gettime(GETTIME_OPTION, &time_spec) != 0 )
+		throw std::runtime_error("failed to retrieve uptime with sysinfo, reason: " + std::string(std::strerror(errno)));
+
+	uint64_t uptime = time_spec.tv_sec * 1000 + time_spec.tv_nsec / 1000000;
+	return uptime;
+}
+
+#elif __OpenBSD__
+static uint64_t getUptime(void) {
+
+	struct timeval time_val;
+	size_t len = sizeof(time_val);
+	int mib[2] = { CTL_KERN, KERN_BOOTTIME };
+
+	if ( sysctl(mib, 2, &time_val, &len, nullptr, 0) != 0 )
+		throw std::runtime_error("failed to retrieve uptime with sysinfo, reason: " + std::string(std::strerror(errno)));
+
+	uint64_t boottime = time_val.tv_sec * 1000 + time_val.tv_usec / 1000;
+	uint64_t now = (uint64_t)time(nullptr) * 1000;
+
+	return now - boottime;
+}
+#elif __linux__
+static uint64_t getUptime(void) {
 
 	struct sysinfo s_info;
 	if ( auto err = ::sysinfo(&s_info); err != 0 )
-		throw std::runtime_error("failed to retrieve uptime with sysinfo, reason: " + std::string(std::strerror(err)));
+		throw std::runtime_error("failed to retrieve uptime with sysinfo, reason: " + std::string(std::strerror(errno)));
+
+	return s_info.uptime;
+}
+#endif
+
+uptime_t::uptime_t() {
+
+	uint64_t uptime;
+	try { uptime = getUptime(); }
+	catch ( const std::runtime_error& e ) { throw e; }
 
 	std::chrono::seconds now = std::chrono::duration_cast<std::chrono::seconds>(
 					std::chrono::system_clock::now().time_since_epoch());
 
-	this -> tp = now - std::chrono::seconds(s_info.uptime);
+	this -> tp = now - std::chrono::seconds(uptime);
 }
 
 uptime_t::uptime_t(const unsigned long int& ts) {
