@@ -1,91 +1,133 @@
 #include <stdexcept>
+#include <cstring>
+#include <string>
 #include <unistd.h>
 #include <sys/sysinfo.h>
 #include "uptime.hpp"
 
 uptime_t::uptime_t() {
 
-	try {
-		this -> update();
-	} catch ( const std::runtime_error& e ) {
-		throw e;
-	}
-}
-
-uptime_t::uptime_t(const unsigned long int& seconds) {
-
-	this -> update(seconds);
-}
-
-uptime_t::uptime_t(const std::chrono::seconds& seconds) {
-
-	this -> update(seconds);
-}
-
-void uptime_t::update() {
-
 	struct sysinfo s_info;
 	if ( auto err = ::sysinfo(&s_info); err != 0 )
-		throw std::runtime_error("failed to retrieve uptime with sysinfo, error code: " + std::to_string(err));
+		throw std::runtime_error("failed to retrieve uptime with sysinfo, reason: " + std::string(std::strerror(err)));
 
-	this -> update(s_info.uptime);
+	std::chrono::seconds now = std::chrono::duration_cast<std::chrono::seconds>(
+					std::chrono::system_clock::now().time_since_epoch());
+
+	this -> tp = now - std::chrono::seconds(s_info.uptime);
 }
 
-void uptime_t::update(const unsigned long int& seconds) {
+uptime_t::uptime_t(const unsigned long int& ts) {
 
-	this -> tp = std::chrono::seconds(seconds);
-	std::chrono::seconds _secs(seconds);
+	std::chrono::seconds now = std::chrono::duration_cast<std::chrono::seconds>(
+					std::chrono::system_clock::now().time_since_epoch());
 
-	auto _days = std::chrono::duration_cast<std::chrono::days>(_secs);
-	_secs -= _days;
-
-	auto _hours = std::chrono::duration_cast<std::chrono::hours>(_secs);
-	_secs -= _hours;
-
-	auto _minutes = std::chrono::duration_cast<std::chrono::minutes>(_secs);
-	_secs -= _minutes;
-
-	this -> _days = _days.count();
-	this -> _hours = _hours.count();
-	this -> _minutes = _minutes.count();
-	this -> _seconds = _secs.count();
+	this -> tp = now - std::chrono::seconds(ts);
 }
 
-void uptime_t::update(const std::chrono::seconds& seconds) {
+uptime_t::uptime_t(const std::chrono::seconds& ts) {
 
-	this -> update(seconds.count());
+	std::chrono::seconds now = std::chrono::duration_cast<std::chrono::seconds>(
+					std::chrono::system_clock::now().time_since_epoch());
+
+	this -> tp = now - ts;
 }
 
-unsigned long uptime_t::timestamp() const {
+unsigned long int uptime_t::timestamp() const {
 
 	return this -> tp.count();
 }
 
+[[maybe_unused]]
+std::chrono::seconds uptime_t::_seconds() const {
+
+	std::chrono::seconds now = std::chrono::duration_cast<std::chrono::seconds>(
+					std::chrono::system_clock::now().time_since_epoch());
+	return now - this -> tp;
+}
+
+[[maybe_unused]]
+std::chrono::days uptime_t::_days(std::chrono::seconds& seconds) const {
+
+	std::chrono::days days = std::chrono::duration_cast<std::chrono::days>(seconds);
+	seconds -= days;
+	return days;
+}
+
+[[maybe_unused]]
+std::chrono::hours uptime_t::_hours(std::chrono::seconds& seconds) const {
+
+	std::chrono::hours hours = std::chrono::duration_cast<std::chrono::hours>(seconds);
+	seconds -= hours;
+	return hours;
+}
+
+[[maybe_unused]]
+std::chrono::minutes uptime_t::_minutes(std::chrono::seconds& seconds) const {
+
+	std::chrono::minutes minutes = std::chrono::duration_cast<std::chrono::minutes>(seconds);
+	seconds -= minutes;
+	return minutes;
+}
+
 int uptime_t::days() const {
 
-	return this -> _days;
+	std::chrono::seconds seconds = this -> _seconds();
+	return this -> _days(seconds).count();
 }
 
 int uptime_t::hours() const {
 
-	return this -> _hours;
+	std::chrono::seconds seconds = this -> _seconds();
+	this -> _days(seconds);
+	return this -> _hours(seconds).count();
 }
 
 int uptime_t::minutes() const {
 
-	return this -> _minutes;
+	std::chrono::seconds seconds = this -> _seconds();
+	this -> _days(seconds);
+	this -> _hours(seconds);
+	return this -> _minutes(seconds).count();
 }
 
 int uptime_t::seconds() const {
 
-	return this -> _seconds;
+	std::chrono::seconds seconds = this -> _seconds();
+	this -> _days(seconds);
+	this -> _hours(seconds);
+	this -> _minutes(seconds);
+	return seconds.count();
+}
+
+uptime_t::DATA uptime_t::data() const {
+
+	std::chrono::seconds seconds = this -> _seconds();
+	std::chrono::days days = this -> _days(seconds);
+	std::chrono::hours hours = this -> _hours(seconds);
+	std::chrono::minutes minutes = this -> _minutes(seconds);
+
+	return { (int)days.count(), (int)hours.count(), (int)minutes.count(), (int)seconds.count() };
+}
+
+std::ostream& operator <<(std::ostream& os, const uptime_t::DATA& data) {
+
+	if ( data.days > 0 )
+		os << data.days << " days ";
+
+	os << data.hours << " hours " << data.minutes << " minutes " << data.seconds << " seconds";
+	return os;
 }
 
 std::ostream& operator <<(std::ostream& os, const uptime_t& ut) {
 
-	if ( ut.days() > 0 )
-		os << ut.days() << " days ";
-
-	os << ut.hours() << " hours " << ut.minutes() << " minutes " << ut.seconds() << " seconds";
+	os << ut.data();
 	return os;
 }
+
+std::ostream& operator <<(std::ostream& os, const uptime_t* ut) {
+
+	os << ut -> data();
+	return os;
+}
+
