@@ -80,20 +80,20 @@ static uint64_t getUptime(void) {
 	if ( auto err = ::sysinfo(&s_info); err != 0 )
 		throw std::runtime_error("failed to retrieve uptime with sysinfo, reason: " + std::string(std::strerror(errno)));
 
-	return s_info.uptime;
+	return s_info.uptime * 1000;
 }
 #endif
 
 uptime_t::uptime_t() {
 
-	uint64_t uptime;
-	try { uptime = getUptime(); }
+	std::chrono::milliseconds uptime;
+	try { uptime = std::chrono::milliseconds(getUptime()); }
 	catch ( const std::runtime_error& e ) { throw e; }
 
 	std::chrono::seconds now = std::chrono::duration_cast<std::chrono::seconds>(
 					std::chrono::system_clock::now().time_since_epoch());
 
-	this -> tp = now - std::chrono::seconds(uptime);
+	this -> tp = now - std::chrono::duration_cast<std::chrono::seconds>(uptime);
 }
 
 uptime_t::uptime_t(const unsigned long int& ts) {
