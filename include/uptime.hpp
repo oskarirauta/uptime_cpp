@@ -9,9 +9,15 @@ struct uptime_t {
 		std::chrono::seconds tp;
 
 		std::chrono::seconds _seconds() const;
+		#if __cplusplus > 201803L
 		std::chrono::days _days(std::chrono::seconds& seconds) const;
 		std::chrono::hours _hours(std::chrono::seconds& seconds) const;
 		std::chrono::minutes _minutes(std::chrono::seconds& seconds) const;
+		#else
+		int _days(std::chrono::seconds& seconds) const;
+		int _hours(std::chrono::seconds& seconds) const;
+		int _minutes(std::chrono::seconds& seconds) const;
+		#endif
 
 	public:
 

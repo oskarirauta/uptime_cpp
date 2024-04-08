@@ -74,7 +74,7 @@ static uint64_t getUptime(void) {
 	return now - boottime;
 }
 #elif __linux__
-static uint64_t getUptime(void) {
+static unsigned long long getUptime(void) {
 
 	struct sysinfo s_info;
 	if ( auto err = ::sysinfo(&s_info); err != 0 )
@@ -117,13 +117,14 @@ unsigned long int uptime_t::timestamp() const {
 	return this -> tp.count();
 }
 
-[[maybe_unused]]
 std::chrono::seconds uptime_t::_seconds() const {
 
 	std::chrono::seconds now = std::chrono::duration_cast<std::chrono::seconds>(
 					std::chrono::system_clock::now().time_since_epoch());
 	return now - this -> tp;
 }
+
+#if __cplusplus > 201803L
 
 [[maybe_unused]]
 std::chrono::days uptime_t::_days(std::chrono::seconds& seconds) const {
@@ -149,17 +150,53 @@ std::chrono::minutes uptime_t::_minutes(std::chrono::seconds& seconds) const {
 	return minutes;
 }
 
+#else
+
+[[maybe_unused]]
+int uptime_t::_days(std::chrono::seconds& seconds) const {
+
+	unsigned long long days = seconds.count() / 86400;
+	seconds -= std::chrono::seconds((unsigned long long)days * 86400);
+	return (int)days;
+}
+
+[[maybe_unused]]
+int uptime_t::_hours(std::chrono::seconds& seconds) const {
+
+        unsigned long long hours = seconds.count() / 3600;
+        seconds -= std::chrono::seconds((unsigned long long)hours * 3600);
+        return (int)hours;
+}
+
+[[maybe_unused]]
+int uptime_t::_minutes(std::chrono::seconds& seconds) const {
+
+        unsigned long long minutes = seconds.count() / 60;
+        seconds -= std::chrono::seconds((unsigned long long)minutes * 60);
+        return (int)minutes;
+}
+
+#endif
+
 int uptime_t::days() const {
 
 	std::chrono::seconds seconds = this -> _seconds();
+	#if __cplusplus > 201803L
 	return this -> _days(seconds).count();
+	#else
+	return this -> _days(seconds);
+	#endif
 }
 
 int uptime_t::hours() const {
 
 	std::chrono::seconds seconds = this -> _seconds();
 	this -> _days(seconds);
+	#if __cplusplus > 201803L
 	return this -> _hours(seconds).count();
+	#else
+	return this -> _hours(seconds);
+	#endif
 }
 
 int uptime_t::minutes() const {
@@ -167,7 +204,11 @@ int uptime_t::minutes() const {
 	std::chrono::seconds seconds = this -> _seconds();
 	this -> _days(seconds);
 	this -> _hours(seconds);
+	#if __cplusplus > 201803L
 	return this -> _minutes(seconds).count();
+	#else
+	return this -> _minutes(seconds);
+	#endif
 }
 
 int uptime_t::seconds() const {
@@ -176,17 +217,26 @@ int uptime_t::seconds() const {
 	this -> _days(seconds);
 	this -> _hours(seconds);
 	this -> _minutes(seconds);
-	return seconds.count();
+	return (int)seconds.count();
 }
 
 uptime_t::DATA uptime_t::data() const {
 
 	std::chrono::seconds seconds = this -> _seconds();
+	#if __cplusplus > 201803L
 	std::chrono::days days = this -> _days(seconds);
 	std::chrono::hours hours = this -> _hours(seconds);
 	std::chrono::minutes minutes = this -> _minutes(seconds);
 
-	return { (int)days.count(), (int)hours.count(), (int)minutes.count(), (int)seconds.count() };
+	return { .days = (int)days.count(), .hours = (int)hours.count(), .minutes = (int)minutes.count(), .seconds = (int)seconds.count() };
+
+	#else
+	int days = this -> _days(seconds);
+	int hours = this -> _hours(seconds);
+	int minutes = this -> _minutes(seconds);
+
+	return { .days = days, .hours = hours, minutes = minutes, .seconds = (int)seconds.count() };
+	#endif
 }
 
 std::ostream& operator <<(std::ostream& os, const uptime_t::DATA& data) {

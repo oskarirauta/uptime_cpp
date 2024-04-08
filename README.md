@@ -1,9 +1,11 @@
+[![License:MIT](https://img.shields.io/badge/License-MIT-blue?style=plastic)](LICENSE)
+[![C++ CI build](../../actions/workflows/build.yml/badge.svg)](../../actions/workflows/build.yml)
 ### uptime_cpp
+
 small library for retrieving Linux uptime in a nice struct
 
-[![C++ CI build](https://github.com/oskarirauta/uptime_cpp/actions/workflows/build.yml/badge.svg)](https://github.com/oskarirauta/uptime_cpp/actions/workflows/build.yml)
+## <sub>Description</sub>
 
-### Description
 First release was linux only due to sysinfo; new version should be more portable
 and is tested to work on Linux and OS X. Developer does not have other systems
 available for testing currently.
@@ -14,6 +16,7 @@ makes a struct uptime_t available with following constructors:
  - uptime_t(seconds) - seconds may be chrono::seconds or unsigned long int, sets timepoint automatically
 
 functions available are following:
+
  - days()
  - hours()
  - minutes()
@@ -25,20 +28,20 @@ struct holding all values.
 
 both uptime_t and uptime_t::DATA support ostream redirection.
 
-### Depencies
-relatively new compiler; atleast --std=c++20 because chrono::days wasn't available earlier than that
+### Notes
+Library utilises std::chrono's durations days, hours and minutes when built with c++20 standard
+or newer, but has legacy functions available for older standards, such as c++17.
 
-### Importing
+## <sub>Importing</sub>
 
  - clone this repository to sub directory uptime
  - in your makefile include uptime/Makefile.inc
  - link your binary with $(UPTIME_OBJS)
+ - add objs directory to root of your project
 
-objs directory must exist in your main build directory or defaults have to be changed.
-Check provided example. If you use some other kind of system, like cmake- you are on your own.
+Paths are modifiable, check Makefiles.
+If you use some other kind of system, like cmake- you are on your own.
 
-### Example
-small example is included
+## <sub>Example</sub>
 
-### License
-MIT
+example code is provided
