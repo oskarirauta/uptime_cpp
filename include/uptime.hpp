@@ -34,11 +34,12 @@ struct uptime_t {
 
 		DATA data() const;
 
+		operator std::string() const;
+
 		uptime_t();
 		uptime_t(const unsigned long int& seconds);
 		uptime_t(const std::chrono::seconds& seconds);
 };
 
-std::ostream& operator <<(std::ostream& os, const uptime_t::DATA& data);
 std::ostream& operator <<(std::ostream& os, const uptime_t& ut);
 std::ostream& operator <<(std::ostream& os, const uptime_t* ut);

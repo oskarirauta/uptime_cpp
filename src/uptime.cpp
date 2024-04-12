@@ -239,24 +239,30 @@ uptime_t::DATA uptime_t::data() const {
 	#endif
 }
 
-std::ostream& operator <<(std::ostream& os, const uptime_t::DATA& data) {
+uptime_t::operator std::string() const {
+
+	uptime_t::DATA data = this -> data();
+	std::string s;
 
 	if ( data.days > 0 )
-		os << data.days << " days ";
+		s += std::to_string(data.days) + " days ";
 
-	os << data.hours << " hours " << data.minutes << " minutes " << data.seconds << " seconds";
-	return os;
+	s += std::to_string(data.hours) + " hours ";
+	s += std::to_string(data.minutes) + " minutes ";
+	s += std::to_string(data.seconds) + " seconds";
+
+	return s;
 }
 
 std::ostream& operator <<(std::ostream& os, const uptime_t& ut) {
 
-	os << ut.data();
+	os << ut.operator std::string();
 	return os;
 }
 
 std::ostream& operator <<(std::ostream& os, const uptime_t* ut) {
 
-	os << ut -> data();
+	os << ut -> operator std::string();
 	return os;
 }
 
