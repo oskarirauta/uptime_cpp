@@ -1,5 +1,5 @@
-UPTIME_DIR?=uptime
-INCLUDES += -I./$(UPTIME_DIR)/include
+UPTIME_DIR?=./uptime
+INCLUDES += -I$(UPTIME_DIR)/include
 UPTIME_OBJS:= \
 	objs/uptime_t.o
 
