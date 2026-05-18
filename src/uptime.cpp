@@ -235,7 +235,7 @@ uptime_t::DATA uptime_t::data() const {
 	int hours = this -> _hours(seconds);
 	int minutes = this -> _minutes(seconds);
 
-	return { .days = days, .hours = hours, minutes = minutes, .seconds = (int)seconds.count() };
+	return { .days = days, .hours = hours, .minutes = minutes, .seconds = (int)seconds.count() };
 	#endif
 }
 
@@ -245,11 +245,12 @@ uptime_t::operator std::string() const {
 	std::string s;
 
 	if ( data.days > 0 )
-		s += std::to_string(data.days) + " days ";
-
-	s += std::to_string(data.hours) + " hours ";
-	s += std::to_string(data.minutes) + " minutes ";
-	s += std::to_string(data.seconds) + " seconds";
+		s += std::to_string(data.days) + ( data.days == 1 ? " day " : " days " );
+	if ( data.days > 0 || data.hours > 0 )
+		s += std::to_string(data.hours) + ( data.hours == 1 ? " hour " : " hours " );
+	if ( data.days > 0 || data.hours > 0 || data.minutes > 0 )
+		s += std::to_string(data.minutes) + ( data.minutes == 1 ? " minute " : " minutes " );
+	s += std::to_string(data.seconds) + ( data.seconds == 1 ? " second" : " seconds" );
 
 	return s;
 }
