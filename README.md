@@ -1,47 +1,75 @@
 [![License:MIT](https://img.shields.io/badge/License-MIT-blue?style=plastic)](LICENSE)
 [![C++ CI build](../../actions/workflows/build.yml/badge.svg)](../../actions/workflows/build.yml)
+
 ### uptime_cpp
 
-small library for retrieving Linux uptime in a nice struct
+Small C++ library for reading the system's uptime into a tidy struct.
 
 ## <sub>Description</sub>
 
-First release was linux only due to sysinfo; new version should be more portable
-and is tested to work on Linux and OS X. Developer does not have other systems
-available for testing currently.
+Reads how long the system has been up. Linux uses `sysinfo()`; the library also
+builds on macOS, FreeBSD, NetBSD, OpenBSD and Windows (Linux and macOS are the
+tested ones). Requires C++17 or newer.
 
-makes a struct uptime_t available with following constructors:
+It exposes a single type, `uptime_t`:
 
- - uptime_t() - updates to current uptime
- - uptime_t(seconds) - seconds may be chrono::seconds or unsigned long int, sets timepoint automatically
+```cpp
+#include <iostream>
+#include "uptime.hpp"
 
-functions available are following:
+int main() {
 
- - days()
- - hours()
- - minutes()
- - seconds()
- - data()
+    uptime_t uptime;                  // sample the current uptime
 
-all returning value corresponding to function's name as int except data which results in a
-struct holding all values.
+    std::cout << uptime << "\n";      // "2 days 3 hours 4 minutes 5 seconds"
+    std::cout << uptime.days() << "d " << uptime.hours() << "h "
+              << uptime.minutes() << "m " << uptime.seconds() << "s\n";
 
-both uptime_t and uptime_t::DATA support ostream redirection.
+    uptime_t::DATA d = uptime.data(); // all parts in one snapshot
+    return 0;
+}
+```
+
+The default constructor throws `std::runtime_error` if the uptime cannot be read.
+
+## <sub>Constructors</sub>
+
+ - `uptime_t()` - the current system uptime
+ - `uptime_t(unsigned long int seconds)` - a known uptime, in elapsed seconds
+ - `uptime_t(std::chrono::seconds seconds)` - the same, as a chrono duration
+
+## <sub>Members</sub>
+
+ - `days()`, `hours()`, `minutes()`, `seconds()` - the uptime split into parts,
+   each an `int`. `hours()`/`minutes()`/`seconds()` are the remainder within the
+   next-bigger unit (so `hours()` is 0-23, `minutes()`/`seconds()` 0-59). Each
+   call re-samples the clock.
+ - `data()` - all four parts at once, as
+   `struct DATA { int days, hours, minutes, seconds; }`; use this when you need a
+   consistent breakdown.
+ - `timestamp()` - the boot time as a unix timestamp (`unsigned long int`,
+   seconds since the epoch).
+ - `operator std::string()` - a human-readable string such as
+   `"2 days 3 hours 4 minutes 5 seconds"` (singular/plural handled, and leading
+   zero units are omitted).
+
+`uptime_t` can be streamed to an `std::ostream`, both by value and by pointer;
+it prints that same human-readable string.
 
 ### Notes
-Library utilises std::chrono's durations days, hours and minutes when built with c++20 standard
-or newer, but has legacy functions available for older standards, such as c++17.
+On C++20 and newer the split uses `std::chrono`'s `days`/`hours`/`minutes`
+durations; on C++17 it falls back to equivalent integer math.
 
 ## <sub>Importing</sub>
 
- - clone this repository to sub directory uptime
- - in your makefile include uptime/Makefile.inc
- - link your binary with $(UPTIME_OBJS)
- - add objs directory to root of your project
+ - clone this repository to sub directory `uptime`
+ - in your makefile include `uptime/Makefile.inc`
+ - link your binary with `$(UPTIME_OBJS)`
+ - add an `objs` directory to the root of your project
 
-Paths are modifiable, check Makefiles.
-If you use some other kind of system, like cmake- you are on your own.
+Paths are modifiable, check the Makefiles. If you use some other build system,
+like cmake, you are on your own.
 
 ## <sub>Example</sub>
 
-example code is provided
+Runnable example code is in [`main.cpp`](main.cpp); build with `make` and run `./example`.
