@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <cerrno>
 #include <cstring>
 #include <string>
 #include "uptime.hpp"
@@ -54,7 +55,7 @@ static uint64_t getUptime(void) {
 	if ( clock_gettime(GETTIME_OPTION, &time_spec) != 0 )
 		throw std::runtime_error("failed to retrieve uptime with sysinfo, reason: " + std::string(std::strerror(errno)));
 
-	uint64_t uptime = time_spec.tv_sec * 1000 + time_spec.tv_nsec / 1000000;
+	uint64_t uptime = (uint64_t)time_spec.tv_sec * 1000 + time_spec.tv_nsec / 1000000;
 	return uptime;
 }
 
@@ -68,7 +69,7 @@ static uint64_t getUptime(void) {
 	if ( sysctl(mib, 2, &time_val, &len, nullptr, 0) != 0 )
 		throw std::runtime_error("failed to retrieve uptime with sysinfo, reason: " + std::string(std::strerror(errno)));
 
-	uint64_t boottime = time_val.tv_sec * 1000 + time_val.tv_usec / 1000;
+	uint64_t boottime = (uint64_t)time_val.tv_sec * 1000 + time_val.tv_usec / 1000;
 	uint64_t now = (uint64_t)time(nullptr) * 1000;
 
 	return now - boottime;
@@ -80,7 +81,10 @@ static unsigned long long getUptime(void) {
 	if ( auto err = ::sysinfo(&s_info); err != 0 )
 		throw std::runtime_error("failed to retrieve uptime with sysinfo, reason: " + std::string(std::strerror(errno)));
 
-	return s_info.uptime * 1000;
+	// cast to 64-bit before the multiply: on 32-bit targets (e.g. OpenWrt
+	// routers) s_info.uptime is a 32-bit long and "* 1000" would overflow
+	// after ~24.8 days of uptime.
+	return (unsigned long long)s_info.uptime * 1000;
 }
 #endif
 

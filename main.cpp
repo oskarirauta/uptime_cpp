@@ -1,22 +1,17 @@
 #include <iostream>
 #include "uptime.hpp"
 
-int main(int argc, char **argv) {
+int main() {
 
 	std::cout << "uptime_cpp test" << std::endl;
 
-	uptime_t *uptime;
-
 	try {
-		uptime = new uptime_t();
-
+		uptime_t uptime;
+		std::cout << "\n" << uptime << std::endl;
 	} catch ( const std::runtime_error& e ) {
-
-		throw e;
+		std::cerr << "error: " << e.what() << std::endl;
+		return 1;
 	}
-
-	std::cout << "\n" << uptime << std::endl;
-	delete uptime;
 
 	return 0;
 }
